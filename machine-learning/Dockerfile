@@ -162,6 +162,53 @@ COPY --from=builder /opt/venv /opt/venv
 COPY scripts/healthcheck.py .
 COPY immich_ml immich_ml
 
+
+ARG TARGETARCH
+
+RUN apt-get update && apt-get install -y wget unzip
+
+RUN wget -q https://bootstrap.pypa.io/get-pip.py -O get-pip.py \
+    && sed -i 's/args.append("setuptools")/args.append("setuptools==77.0.3")/' get-pip.py \
+    && python3 get-pip.py "pip"
+
+# Install axmodels
+RUN apt-get update && apt-get install -y git-lfs
+RUN git lfs install
+RUN mkdir -p /cache/clip && \
+    cd /cache/clip/ && \
+    git clone https://huggingface.co/AXERA-TECH/ViT-L-14-336-CN__axera
+
+RUN mkdir -p /cache/clip && \
+    cd /cache/clip/ && \
+    git clone https://huggingface.co/AXERA-TECH/ViT-L-14-336__axera
+
+# Install axpyengine
+RUN wget https://github.com/ivanshi1108/pyaxengine/releases/download/0.1.3.rc1-immich/axengine-0.1.3-py3-none-any.whl -O /axengine-0.1.3-py3-none-any.whl
+RUN pip3 install /axengine-0.1.3-py3-none-any.whl \
+    && rm /axengine-0.1.3-py3-none-any.whl
+
+# Install axcl
+RUN if [ "$TARGETARCH" = "amd64" ]; then \
+        echo "Installing x86_64 version of axcl"; \
+        wget https://github.com/ivanshi1108/assets/releases/download/v0.16.2/axcl_host_x86_64_V3.6.5_20250908154509_NO4973.deb -O /axcl.deb; \
+    else \
+        echo "Installing aarch64 version of axcl"; \
+        wget https://github.com/ivanshi1108/assets/releases/download/v0.16.2/axcl_host_aarch64_V3.6.5_20250908154509_NO4973.deb -O /axcl.deb; \
+    fi
+
+RUN mkdir /unpack_axcl && \
+    dpkg-deb -x /axcl.deb /unpack_axcl && \
+    cp -R /unpack_axcl/usr/bin/axcl /usr/bin/ && \
+    cp -R /unpack_axcl/usr/lib/axcl /usr/lib/ && \
+    rm -rf /unpack_axcl /axcl.deb
+
+# Set ldconfig path
+RUN echo "/usr/lib/axcl" > /etc/ld.so.conf.d/ax.conf
+
+# Set env
+ENV PATH="$PATH:/usr/bin/axcl"
+ENV LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/usr/lib/axcl"
+
 ARG BUILD_ID
 ARG BUILD_IMAGE
 ARG BUILD_SOURCE_REF
@@ -177,7 +224,9 @@ ENV IMMICH_SOURCE_REF=${BUILD_SOURCE_REF}
 ENV IMMICH_SOURCE_COMMIT=${BUILD_SOURCE_COMMIT}
 ENV IMMICH_SOURCE_URL=https://github.com/immich-app/immich/commit/${BUILD_SOURCE_COMMIT}
 
-ENTRYPOINT ["tini", "--"]
-CMD ["python", "-m", "immich_ml"]
+# ENTRYPOINT ["tini", "--"]
+# CMD ["python", "-m", "immich_ml"]
+
+ENTRYPOINT ["sh", "-c", "ldconfig && exec tini -- python -m immich_ml"]
 
 HEALTHCHECK CMD python3 healthcheck.py

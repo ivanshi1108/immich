@@ -10,7 +10,7 @@ from huggingface_hub import snapshot_download
 import immich_ml.sessions.ann.loader
 import immich_ml.sessions.rknn as rknn
 from immich_ml.sessions.ort import OrtSession
-from immich_ml.sessions.axengine import InferenceSession as AXSession
+from axengine import InferenceSession as AXSession
 
 from ..config import clean_name, log, settings
 from ..schemas import ModelFormat, ModelIdentity, ModelSession, ModelTask, ModelType
