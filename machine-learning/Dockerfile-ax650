@@ -172,15 +172,9 @@ RUN wget -q https://bootstrap.pypa.io/get-pip.py -O get-pip.py \
     && python3 get-pip.py "pip"
 
 # Install axmodels
-RUN apt-get update && apt-get install -y git-lfs
-RUN git lfs install
 RUN mkdir -p /cache/clip && \
-    cd /cache/clip/ && \
-    git clone https://huggingface.co/AXERA-TECH/ViT-L-14-336-CN__axera
-
-RUN mkdir -p /cache/clip && \
-    cd /cache/clip/ && \
-    git clone https://huggingface.co/AXERA-TECH/ViT-L-14-336__axera
+    hf download AXERA-TECH/ViT-L-14-336__axera --local-dir /cache/clip/ViT-L-14-336__axera && \
+    hf download AXERA-TECH/ViT-L-14-336-CN__axera --local-dir /cache/clip/ViT-L-14-336-CN__axera
 
 # Install axpyengine
 RUN wget https://github.com/ivanshi1108/pyaxengine/releases/download/0.1.3.rc1-immich/axengine-0.1.3-py3-none-any.whl -O /axengine-0.1.3-py3-none-any.whl
